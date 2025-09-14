@@ -1,44 +1,44 @@
-import telebot
-from telebot import types
-from PIL import Image
+# Filix.py
+import os
+from dotenv import load_dotenv
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 
-TOKEN = "7955274406:AAH8dB_u7AFsSXaxDJvcgIUznXcEv7F1goo"
-OWNER_ID = 8392023129
+# .env dosyasını yükle (Render kullanıyorsan environment variables otomatik okunur)
+load_dotenv()
 
-bot = telebot.TeleBot(TOKEN)
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+OWNER_ID = int(os.getenv("OWNER_ID"))
 
-@bot.message_handler(commands=['start'])
-def start(message):
-    keyboard = types.InlineKeyboardMarkup()
-    button = types.InlineKeyboardButton("Sipariş Ver", callback_data="order")
-    keyboard.add(button)
-    bot.send_message(message.chat.id, "Merhaba, logo yaptırmak için butonlara tıklayın:", reply_markup=keyboard)
+# /start komutu
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [[InlineKeyboardButton("Sipariş Ver", callback_data='order')]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Merhaba, logo yaptırmak için butonlara tıklayın:", reply_markup=reply_markup)
 
-@bot.callback_query_handler(func=lambda call: True)
-def callback(call):
-    if call.data == "order":
-        bot.send_message(call.message.chat.id, "Lütfen logo örneğini gönderin.")
+# Buton tıklama işlemi
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if query.data == "order":
+        await query.message.reply_text("Lütfen logo örneğini gönderin.")
 
-def save_photo(file_path):
-    try:
-        img = Image.open(file_path)
-        img.verify()
-        return True
-    except:
-        return False
+# Kullanıcının resim göndermesi
+async def photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.message.from_user
+    photo_file = await update.message.photo[-1].get_file()
+    file_path = f"{user.id}_logo.png"
+    await photo_file.download_to_drive(file_path)
+    await update.message.reply_text("Sipariş alındı, 24 saat içinde hazır olacak.")
+    await context.bot.send_photo(chat_id=OWNER_ID, photo=open(file_path, 'rb'), caption=f"{user.first_name} kullanıcısından logo siparişi")
+    os.remove(file_path)  # Gönderimden sonra dosyayı sil
 
-@bot.message_handler(content_types=['photo'])
-def handle_photo(message):
-    file_info = bot.get_file(message.photo[-1].file_id)
-    downloaded_file = bot.download_file(file_info.file_path)
-    file_path = f"{message.from_user.id}_logo.png"
-    with open(file_path, 'wb') as f:
-        f.write(downloaded_file)
-    
-    if save_photo(file_path):
-        bot.send_message(message.chat.id, "Sipariş alındı, 24 saat içinde hazır olacak.")
-        bot.send_photo(OWNER_ID, open(file_path, 'rb'), caption=f"{message.from_user.first_name} kullanıcısından logo siparişi")
-    else:
-        bot.send_message(message.chat.id, "Geçersiz resim, lütfen tekrar deneyin.")
+# Bot uygulaması
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CallbackQueryHandler(button))
+app.add_handler(MessageHandler(filters.PHOTO, photo))
 
-bot.polling(none_stop=True)
+# Botu çalıştır
+print("Bot çalışıyor...")
+app.run_polling()
