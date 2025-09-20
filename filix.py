@@ -1,4 +1,4 @@
-From telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -19,7 +19,7 @@ ANDROID_MENU_KEYBOARD = [
     [InlineKeyboardButton("🔥 Monster Cheat", callback_data='monster')],
     [InlineKeyboardButton("✨ And Cheats", callback_data='andcheats')],
     [InlineKeyboardButton("💎 Zolo Cheat", callback_data='zolo')],
-    [InlineKeyboardButton("🌟 Astor Cheat", callback_data='astor_cheat')], # Astor Cheat eklendi
+    [InlineKeyboardButton("🌟 Astor Cheat", callback_data='astor_cheat')],  # Astor Cheat eklendi
     [InlineKeyboardButton("⬅️ Geri", callback_data='back_to_main')]
 ]
 
@@ -52,7 +52,7 @@ HILE_DETAYLARI = {
         'aylik': "950₺",
         'link': "https://t.me/wortersyxyz"
     },
-    'astor_cheat': { # Astor Cheat detayları eklendi
+    'astor_cheat': {  # Astor Cheat detayları eklendi
         'name': "Astor Cheat",
         'gunluk': "230₺",
         'haftalik': "650₺",
