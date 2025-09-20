@@ -114,3 +114,40 @@ async def button(update: Update, context: CallbackContext):
         back_callback = 'back_to_android' if query.data in ['monster', 'andcheats', 'zolo', 'astor_cheat'] else 'back_to_ios'
 
         buy_button = [
+            [InlineKeyboardButton("🛒 HEMEN SATIN AL", url=hile_info['link'])],
+            [InlineKeyboardButton("⬅️ Geri", callback_data=back_callback)]
+        ]
+        
+        await query.edit_message_text(
+            text=f"{hile_info['name']}\n\n"
+                 f"🌟 **Günlük:** {hile_info['gunluk']}\n"
+                 f"🌟 **Haftalık:** {hile_info['haftalik']}\n"
+                 f"🌟 **Aylık:** {hile_info['aylik']}",
+            reply_markup=InlineKeyboardMarkup(buy_button),
+            parse_mode='Markdown'
+        )
+    
+    elif query.data == 'back_to_android':
+         await query.edit_message_text(
+            text="Android seçenekleri burada! 🤖 Lütfen istediğin hileyi seç:",
+            reply_markup=InlineKeyboardMarkup(ANDROID_MENU_KEYBOARD)
+        )
+
+    elif query.data == 'back_to_ios':
+        await query.edit_message_text(
+            text="iOS seçenekleri burada! 📱 Lütfen istediğin hileyi seç:",
+            reply_markup=InlineKeyboardMarkup(IOS_MENU_KEYBOARD)
+        )
+
+def main():
+    """Botu başlatır ve çalıştırır."""
+    application = Application.builder().token(TOKEN).build()
+    
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+
+    print("Bot çalışmaya başladı! /start komutuyla test edebilirsiniz.")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == '__main__':
+    main()
