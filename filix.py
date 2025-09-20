@@ -1,6 +1,7 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.constants import ParseMode  # Bu satır doğru import'u yapıyor
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram import Update
+from telegram.constants import ParseMode
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
+from telegram.ext import filters  # Doğru import
 
 API_TOKEN = '8487383178:AAF488Ea6UXzeuJXSKR6u0nzUZzcLNB6PM8'
 ADMIN_ID = 8392023129  # Admin ID
@@ -102,19 +103,19 @@ def main():
     dispatcher.add_handler(CommandHandler('start', start))
 
     # Kullanıcı "Sipariş Ver" butonuna tıkladığında
-    dispatcher.add_handler(MessageHandler(Filters.regex('^Sipariş Ver$'), add_gift))
+    dispatcher.add_handler(MessageHandler(filters.Regex('^Sipariş Ver$'), add_gift))
 
     # Kullanıcı "Attım" butonuna tıkladığında
-    dispatcher.add_handler(MessageHandler(Filters.regex('^Attım$'), attim))
+    dispatcher.add_handler(MessageHandler(filters.Regex('^Attım$'), attim))
 
     # Admin onay isteği
-    dispatcher.add_handler(MessageHandler(Filters.text & Filters.user(user_id=ADMIN_ID), admin_approval))
+    dispatcher.add_handler(MessageHandler(filters.Text() & filters.User(user_id=ADMIN_ID), admin_approval))
 
     # Logo metni alma
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, process_logo_text))
+    dispatcher.add_handler(MessageHandler(filters.Text() & ~filters.Command(), process_logo_text))
 
     # Admin logo gönderdiğinde
-    dispatcher.add_handler(MessageHandler(Filters.photo & Filters.user(user_id=ADMIN_ID), admin_send_logo))
+    dispatcher.add_handler(MessageHandler(filters.Photo() & filters.User(user_id=ADMIN_ID), admin_send_logo))
 
     updater.start_polling()
     updater.idle()
