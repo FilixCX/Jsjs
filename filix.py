@@ -1,4 +1,5 @@
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ParseMode
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.constants import ParseMode  # Bu satır doğru import'u yapıyor
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
 API_TOKEN = '8487383178:AAF488Ea6UXzeuJXSKR6u0nzUZzcLNB6PM8'
@@ -118,5 +119,5 @@ def main():
     updater.start_polling()
     updater.idle()
 
-if name == 'main':
+if __name__ == '__main__':
     main()
