@@ -1,123 +1,110 @@
- from telegram import Update
-from telegram.constants import ParseMode
-from telegram.ext import Application, CommandHandler, MessageHandler, CallbackContext
-from telegram.ext import filters  # Doğru import
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import ParseMode
+from aiogram.utils import executor
+from aiogram.contrib.middlewares.logging import LoggingMiddleware
+import os
+from dotenv import load_dotenv
 
-API_TOKEN = '8487383178:AAF488Ea6UXzeuJXSKR6u0nzUZzcLNB6PM8'
+# .env dosyasından bot token'ını yükleyin
+load_dotenv()
+API_TOKEN = os.getenv("8487383178:AAF488Ea6UXzeuJXSKR6u0nzUZzcLNB6PM8")
 ADMIN_ID = 8392023129  # Admin ID
+
+# Botu başlatın
+bot = Bot(token=API_TOKEN)
+dp = Dispatcher(bot)
+dp.middleware.setup(LoggingMiddleware())
+
+# Logger ayarları
+logging.basicConfig(level=logging.INFO)
 
 # Kullanıcıların sırası
 user_queue = {}
 
-async def start(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    await update.message.reply_text(
+# /start komutu
+@dp.message_handler(commands=['start'])
+async def start(message: types.Message):
+    user = message.from_user
+    await message.answer(
         f"Hoşgeldin {user.first_name} 🎉! Sipariş vermek için aşağıdaki butona tıklayın.",
-        reply_markup=ReplyKeyboardMarkup([["Sipariş Ver"]], resize_keyboard=True)  # "Sipariş Ver" butonu
+        reply_markup=types.ReplyKeyboardMarkup(
+            [[types.KeyboardButton("Sipariş Ver")]], resize_keyboard=True, one_time_keyboard=True
+        )
     )
 
-async def add_gift(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    # Kullanıcıya hediyeleri göndermesi hatırlatılır
-    await update.message.reply_text(
+# "Sipariş Ver" butonuna tıklandığında
+@dp.message_handler(lambda message: message.text == "Sipariş Ver")
+async def add_gift(message: types.Message):
+    await message.answer(
         "@rushexStore'a 15 yıldızlık 2 hediye gönderin, ardından admin onayı için butona tıklayın. 🎁",
-        reply_markup=ReplyKeyboardMarkup([["Attım"]], resize_keyboard=True)
+        reply_markup=types.ReplyKeyboardMarkup(
+            [[types.KeyboardButton("Attım")]], resize_keyboard=True, one_time_keyboard=True
+        )
     )
 
-async def attim(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    user_queue[user.id] = {'status': 'waiting_for_admin_approval'}
-    
+# "Attım" butonuna tıklandığında
+@dp.message_handler(lambda message: message.text == "Attım")
+async def attim(message: types.Message):
+    user_id = message.from_user.id
+    user_queue[user_id] = {'status': 'waiting_for_admin_approval'}
+
     # Admin'e onay isteği gönderilir
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"{user.first_name} ({user.id}) logo için onay bekliyor. Onaylamak için evet, reddetmek için hayır yazın. 🔥",
+    await bot.send_message(
+        ADMIN_ID,
+        f"{message.from_user.first_name} ({user_id}) logo için onay bekliyor. Onaylamak için 'evet', reddetmek için 'hayır' yazın. 🔥",
     )
-    await update.message.reply_text(
+    await message.answer(
         "Hediye göndermeniz başarıyla alındı. Admin onayını bekleyin. ⏳"
     )
 
-async def admin_approval(update: Update, context: CallbackContext) -> None:
-    if update.message.from_user.id != ADMIN_ID:
-        return
-    
-    if update.message.text.lower() == "evet" and user_queue:
-        # Admin onay verirse
+# Admin onayını almak
+@dp.message_handler(lambda message: message.from_user.id == ADMIN_ID)
+async def admin_approval(message: types.Message):
+    if message.text.lower() == "evet" and user_queue:
         user_id = list(user_queue.keys())[0]
         user_queue[user_id]['status'] = 'approved'
-
-        await context.bot.send_message(
-            chat_id=user_id,
-            text="Logo işleminiz onaylandı! Şimdi logo üzerinde ne yazmasını istediğinizi belirtin. 🖋️"
+        await bot.send_message(
+            user_id,
+            "Logo işleminiz onaylandı! Şimdi logo üzerinde ne yazmasını istediğinizi belirtin. 🖋️"
         )
-        await update.message.reply_text("Onay verildi, işlemi devam ettiriyorum.")
-    elif update.message.text.lower() == "hayır" and user_queue:
-        # Admin reddederse
+        await message.answer("Onay verildi, işlemi devam ettiriyorum.")
+    elif message.text.lower() == "hayır" and user_queue:
         user_id = list(user_queue.keys())[0]
-        await context.bot.send_message(
-            chat_id=user_id,
-            text="Üzgünüz, logo talebiniz reddedildi. 🙁"
-        )
-        await update.message.reply_text("Logo talebi reddedildi.")
+        await bot.send_message(user_id, "Üzgünüz, logo talebiniz reddedildi. 🙁")
+        await message.answer("Logo talebi reddedildi.")
 
-async def process_logo_text(update: Update, context: CallbackContext) -> None:
-    user = update.effective_user
-    if user.id not in user_queue or user_queue[user.id].get('status') != 'approved':
-        return
+# Kullanıcıdan logo metnini almak
+@dp.message_handler(lambda message: message.from_user.id in user_queue and user_queue[message.from_user.id].get('status') == 'approved')
+async def process_logo_text(message: types.Message):
+    logo_text = message.text
+    user_id = message.from_user.id
+    user_queue[user_id]['logo_text'] = logo_text
 
-    # Kullanıcıdan logo metni alınır
-    logo_text = update.message.text
-    user_queue[user.id]['logo_text'] = logo_text
-
-    await update.message.reply_text(
+    await message.answer(
         f"Logo metniniz: '{logo_text}' sırasına alındı. Admin'e bildirildi. ✅"
     )
 
     # Admin'e logo talebi bildirildi
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"{user.first_name} logo talebinde bulundu: '{logo_text}'."
+    await bot.send_message(
+        ADMIN_ID,
+        f"{message.from_user.first_name} logo talebinde bulundu: '{logo_text}'."
     )
 
-async def admin_send_logo(update: Update, context: CallbackContext) -> None:
-    if update.message.from_user.id != ADMIN_ID:
-        return
-
-    # Admin logo gönderdiğinde
-    if update.message.photo:
-        user_id = list(user_queue.keys())[0]
-        logo = update.message.photo[-1].file_id
-        await context.bot.send_photo(chat_id=user_id, photo=logo, caption="Logo hazır! 🎨✨")
+# Admin'in logo göndermesi
+@dp.message_handler(content_types=['photo'], lambda message: message.from_user.id == ADMIN_ID)
+async def admin_send_logo(message: types.Message):
+    user_id = list(user_queue.keys())[0]
+    if message.photo:
+        logo = message.photo[-1].file_id
+        await bot.send_photo(chat_id=user_id, photo=logo, caption="Logo hazır! 🎨✨")
 
         # Admin'e bildirim
-        await context.bot.send_message(chat_id=ADMIN_ID, text="Logo başarıyla gönderildi! 🖼️")
+        await bot.send_message(ADMIN_ID, "Logo başarıyla gönderildi! 🖼️")
 
         # Kullanıcıya bildirim
-        await context.bot.send_message(chat_id=user_id, text="Logo başarıyla oluşturuldu ve gönderildi! 🎉")
+        await bot.send_message(user_id, "Logo başarıyla oluşturuldu ve gönderildi! 🎉")
 
-async def main():
-    application = Application.builder().token(API_TOKEN).build()
-
-    # /start komutu
-    application.add_handler(CommandHandler('start', start))
-
-    # Kullanıcı "Sipariş Ver" butonuna tıkladığında
-    application.add_handler(MessageHandler(filters.Regex('^Sipariş Ver$'), add_gift))
-
-    # Kullanıcı "Attım" butonuna tıkladığında
-    application.add_handler(MessageHandler(filters.Regex('^Attım$'), attim))
-
-    # Admin onay isteği
-    application.add_handler(MessageHandler(filters.Text() & filters.User(user_id=ADMIN_ID), admin_approval))
-
-    # Logo metni alma
-    application.add_handler(MessageHandler(filters.Text() & ~filters.Command(), process_logo_text))
-
-    # Admin logo gönderdiğinde
-    application.add_handler(MessageHandler(filters.Photo() & filters.User(user_id=ADMIN_ID), admin_send_logo))
-
-    await application.run_polling()
-
+# Botu çalıştırmak için
 if __name__ == '__main__':
-    import asyncio
-    asyncio.run(main())
+    executor.start_polling(dp, skip_updates=True)
