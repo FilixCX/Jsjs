@@ -5,7 +5,7 @@ import google.generativeai as genai
 import asyncio
 
 # --- API Anahtarlarınızı Buraya Girin ---
-TOKEN ="8448966224:AAH3CwxDRNkHmtrC1gvyCUcTi9Ibd0vave0"
+TOKEN = "8448966224:AAH3CwxDRNkHmtrC1gvyCUcTi9Ibd0vave0"
 GEMINI_API_KEY = "AIzaSyAAfSX-4rNJcluag6iWvI4GE_a1dE8f0PI"
 VIP_KEY = "Rushexvip11"
 # --------------------------------------
@@ -13,7 +13,8 @@ VIP_KEY = "Rushexvip11"
 # Gemini API'yi yapılandırın
 try:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
+    # Model adını 'gemini-pro-vision' olarak değiştiriyoruz
+    model = genai.GenerativeModel('gemini-pro-vision')
 except Exception as e:
     print(f"Gemini API yapılandırması başarısız: {e}")
     exit()
